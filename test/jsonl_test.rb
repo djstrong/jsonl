@@ -1,11 +1,45 @@
 require 'test_helper'
 require 'json'
+require 'tempfile'
 
 class JSONLTest < Minitest::Test
   def setup
-    @source = File.read(File.expand_path('../fixtures/source.jsonl', __FILE__))
+    @path = File.expand_path('../fixtures/source.jsonl', __FILE__)
+
+    @source = File.read(@path)
     @parsed = JSONL.parse(@source)
     @generated = JSONL.generate(@parsed)
+
+    @true = [{"name" => "Gilbert", "wins" => [["straight", "7♣"], ["one pair", "10♥"]]},
+             {"name" => "Alexa", "wins" => [["two pair", "4♠"], ["two pair", "9♠"]]},
+             {"name" => "May", "wins" => []},
+             {"name" => "Deloise", "wins" => [["three of a kind", "5♣"]]}]
+  end
+
+  def test_reader
+    jsonl_reader = JSONL.open(@path)
+    i = 0
+    jsonl_reader.each do |obj|
+      assert_equal obj, @true[i]
+      i += 1
+    end
+    jsonl_reader.close
+  end
+
+  def test_writer_new
+    output = StringIO.new
+    jsonl_writer = JSONL.new(output)
+    @parsed.each do |obj|
+      jsonl_writer << obj
+    end
+  end
+
+  def test_writer_open
+    jsonl_writer = JSONL.open(File.expand_path('../fixtures/target.jsonl', __FILE__), 'w')
+    @parsed.each do |obj|
+      jsonl_writer << obj
+    end
+    jsonl_writer.close
   end
 
   def test_generate_type_error
